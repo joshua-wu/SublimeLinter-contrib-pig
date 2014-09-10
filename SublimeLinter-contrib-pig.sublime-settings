@@ -1,0 +1,6 @@
+{
+    // Set java_home if Pig complains that it cannot find JAVA_HOME 
+    "java_home": "",
+    // Set pig_home if the Pig binary is not in your system path
+    "pig_home": ""
+}
