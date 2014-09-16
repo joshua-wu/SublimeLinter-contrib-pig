@@ -88,6 +88,7 @@ class Pig(Linter):
         """Get all the pig parameter out from the code using regex."""
 
         var_names = re.findall('\$(\w+)', code)
+        var_names.append('linter_in_case_of_param_empty_place_holder')
         var_names = set(var_names)
         var_names = [var_name for var_name in var_names if not var_name.isdigit()]
         if debug:
@@ -111,8 +112,29 @@ class Pig(Linter):
 
         return all_cmd_string
 
+    def replace_macro(self, code):
+        """Deal with all macro, to replace it with load statement"""
+        #1.replace all import
+        if debug:
+            print('before:', code)
+        code = re.sub('import +.*\n', ';\n', code)
+        code = re.sub(r'^ *\w+[\w|\d]*\(.*\) *; *\n', r';\n', code)
+        if debug:
+            print('after:', code)
+
+        #2. replace all macro with load
+        #Note, we can not deal with the case:
+        # a = macro_function( a,
+        #    b)
+        # that is, call a macro in multipe line
+        #because we can not make the error line number match if we replace #the \n
+        code = re.sub(r'(?P<relation>\w[\w\d\-_]*) *= *\w[\w|\d_\-]*\(.*\)', r'\g<relation>'+' = load \'linter_test\'', code)
+        if debug:
+            print('final', code)
+        return code
+
     def run(self, cmd, code):
-        """process the code with cmd."""
+        """Process the code with cmd."""
 
         self.set_pig_tmp_dir()
 
@@ -120,8 +142,9 @@ class Pig(Linter):
 
         if debug:
             print(self.debug_prefix + str(cmd))
-        var_names = self.get_pig_param(code)
 
+        code = self.replace_macro(code)
+        var_names = self.get_pig_param(code)
         all_cmd_string = self.get_cmd_string(cmd, var_names)
 
         self.cmd = all_cmd_string
